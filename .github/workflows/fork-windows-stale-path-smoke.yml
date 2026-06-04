@@ -1,0 +1,38 @@
+name: Fork Windows stale path smoke
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - fix/windows-stale-rollout-path
+      - fork/windows-stale-path-ci
+    paths:
+      - "codex-rs/**"
+      - ".github/workflows/fork-windows-stale-path-smoke.yml"
+
+permissions:
+  contents: read
+
+env:
+  CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+
+jobs:
+  windows-stale-path-smoke:
+    name: Build and test app-server path resume on Windows
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: codex-rs
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@e081816240890017053eacbb1bdf337761dc5582 # 1.95.0
+      - name: Build codex app-server
+        run: cargo build -p codex-app-server --bin codex-app-server
+      - name: Test path comparison normalization
+        run: cargo test -p codex-utils-path path_comparison
+      - name: Test running-thread stale path resume regression
+        timeout-minutes: 25
+        run: cargo test -p codex-app-server --test all thread_resume_rejects_mismatched_path_for_running_thread_id -- --nocapture
